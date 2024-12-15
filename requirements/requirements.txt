@@ -1,0 +1,8 @@
+ipython
+pandas
+pyarrow
+numpy
+pyspark
+requests
+python-dotenv
+minio

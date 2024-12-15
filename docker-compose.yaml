@@ -1,0 +1,71 @@
+version: '3.9'
+
+services:
+  master:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_LOG_DIR=/opt/spark/spark-events
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - ./:/opt/spark/apps
+    command: ["bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh"]
+    networks:
+      net-transactions:
+        ipv4_address: 192.168.2.100
+    ports:
+      - "8080:8080"  # Spark Master UI
+      - "7077:7077"  # Spark Master RPC
+
+  worker1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: worker1
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://192.168.2.100:7077
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - ./:/opt/spark/apps
+    command: ["bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh"]
+    networks:
+      net-transactions:
+        ipv4_address: 192.168.2.101
+    ports:
+      - "9000:9000"  # MinIO API
+      - "9001:9001"  # MinIO Console
+
+  spark-history-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spark-history-server
+    environment:
+      - SPARK_MODE=history
+      - SPARK_MASTER_URL=spark://192.168.2.100:7077
+      - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=/opt/spark/spark-events
+      - SPARK_HISTORY_UI_PORT=18080
+    volumes:
+      - spark-logs:/opt/spark/spark-events
+    command: [ "bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh" ]
+    networks:
+      net-transactions:
+        ipv4_address: 192.168.2.102
+    ports:
+      - '18080:18080'
+
+networks:
+  net-transactions:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.2.0/24
+
+volumes:
+  spark-logs:
