@@ -18,6 +18,8 @@ ENV PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
 ENV PYSPARK_PYTHON python3
 ENV PYTHONPATH=$SPARK_HOME/python/:$PYTHONPATH
 
+COPY conf/spark-defaults.conf "$SPARK_HOME/conf"
+
 RUN wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar
 RUN wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.771/aws-java-sdk-bundle-1.12.771.jar
 
@@ -44,4 +46,4 @@ RUN python -m venv venv
 RUN /bin/bash -c "source /venv/bin/activate"
 RUN /bin/bash -c "source /venv/bin/activate && pip install -r requirements.txt"
 
-CMD ["spark-minio-entrypoint.sh"]
+CMD ["spark-minio-entrypoint.sh", "python3"]

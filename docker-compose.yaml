@@ -13,6 +13,7 @@ services:
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     volumes:
       - ./:/opt/spark/apps
+      - spark-logs:/opt/spark/spark-events
     command: ["bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh"]
     networks:
       net-transactions:
@@ -33,6 +34,7 @@ services:
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     volumes:
       - ./:/opt/spark/apps
+      - spark-logs:/opt/spark/spark-events
     command: ["bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh"]
     networks:
       net-transactions:

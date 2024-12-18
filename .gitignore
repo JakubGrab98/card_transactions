@@ -166,3 +166,4 @@ test.py
 .env
 archive
 dependencies
+logs
