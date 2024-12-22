@@ -8,12 +8,10 @@ services:
     container_name: master
     environment:
       - SPARK_MODE=master
-      - SPARK_LOG_DIR=/opt/spark/spark-events
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     volumes:
       - ./:/opt/spark/apps
-      - spark-logs:/opt/spark/spark-events
     command: ["bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh"]
     networks:
       net-transactions:
@@ -34,7 +32,6 @@ services:
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     volumes:
       - ./:/opt/spark/apps
-      - spark-logs:/opt/spark/spark-events
     command: ["bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh"]
     networks:
       net-transactions:
@@ -51,10 +48,9 @@ services:
     environment:
       - SPARK_MODE=history
       - SPARK_MASTER_URL=spark://192.168.2.100:7077
-      - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=/opt/spark/spark-events
-      - SPARK_HISTORY_UI_PORT=18080
-    volumes:
-      - spark-logs:/opt/spark/spark-events
+      - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=s3a://financials/spark-events -Dspark.history.ui.port=18080 -Dspark.hadoop.fs.s3a.access.key=${MINIO_ROOT_USER} -Dspark.hadoop.fs.s3a.secret.key=${MINIO_ROOT_PASSWORD} -Dspark.hadoop.fs.s3a.endpoint=http://192.168.2.101:9000 -Dspark.hadoop.fs.s3a.path.style.access=true -Dspark.hadoop.fs.s3a.connection.ssl.enabled=false
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     command: [ "bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh" ]
     networks:
       net-transactions:
@@ -68,6 +64,3 @@ networks:
     ipam:
       config:
         - subnet: 192.168.2.0/24
-
-volumes:
-  spark-logs:
