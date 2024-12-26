@@ -8,9 +8,7 @@ spark = SparkSession.builder.appName("transform").getOrCreate()
 df = (
     spark.read
     .option("header", "true")
-    .csv("C:/Users/kubag/PycharmProjects/financial_transactions/data/raw/cards_data.csv"))
-
-
+    .csv("C:/Users/kubag/PycharmProjects/financial_transactions/data/raw/transactions_data.csv"))
 
 def format_amount_column(df: DataFrame, column_name: str) -> DataFrame:
     transform_df = (
@@ -75,3 +73,21 @@ def transform_card_data(df: DataFrame) -> DataFrame:
         )
     )
     return transformed_df
+
+def transform_users_data(df: DataFrame) ->DataFrame:
+    transform_df = (
+        df
+        .transform(format_amount_column, "yearly_income")
+        .transform(format_amount_column, "per_capita_income")
+        .transform(format_amount_column, "total_debt")
+        .withColumnRenamed("id", "natural_key")
+        .withColumn("current_age", col("current_age").cast(IntegerType()))
+        .select(
+            [
+                "natural_key", "current_age", "retirement_age", "birth_year", "birth_month",
+                "gender", "latitude", "longitude", "per_capita_income", "yearly_income",
+                "total_debt", "credit_score", "currency",
+            ]
+        )
+    )
+    return transform_df
