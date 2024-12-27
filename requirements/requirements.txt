@@ -6,3 +6,5 @@ pyspark
 requests
 python-dotenv
 minio
+apache-airflow
+apache-airflow-providers-apache-spark
