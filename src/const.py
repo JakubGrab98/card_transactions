@@ -29,7 +29,6 @@ CARDS_SCHEMA = StructType([
     StructField("client_id", IntegerType(), True),
     StructField("card_brand", StringType(), True),
     StructField("card_type", StringType(), True),
-    StructField("card_number", LongType(), True),
     StructField("card_number", StringType(), True),
     StructField("expires", StringType(), True),
     StructField("has_chip", StringType(), True),

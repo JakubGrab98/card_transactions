@@ -1,6 +1,6 @@
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
-import utils as ut
+import src.utils as ut
 
 
 def transform_transactions_data(df: DataFrame) -> DataFrame:
@@ -14,10 +14,14 @@ def transform_transactions_data(df: DataFrame) -> DataFrame:
         .transform(ut.format_amount_column, column_name="amount")
         .withColumnRenamed("id", "natural_key")
         .withColumn("year", year("date"))
-        .withColumn("month", year("date"))
+        .withColumn("month", month("date"))
         .select(["natural_key", "date", "year", "month", "client_id", "card_id", "amount"])
     )
-    transaction_df.write.partitionBy("year", "month").mode("overwrite").parquet("s3a://financials/data/transform/card_data")
+    (transaction_df.write
+         .partitionBy("year", "month")
+         .mode("overwrite")
+         .parquet("s3a://financials/data/transform/transactions")
+     )
     return transaction_df
 
 def transform_card_data(df: DataFrame) -> DataFrame:
