@@ -16,6 +16,7 @@ USERS_SCHEMA = StructType([
     StructField("birth_year", IntegerType(), True),
     StructField("birth_month", IntegerType(), True),
     StructField("gender", StringType(), True),
+    StructField("address", StringType(), True),
     StructField("latitude", FloatType(), True),
     StructField("longitude", FloatType(), True),
     StructField("per_capita_income", StringType(), True),
@@ -31,7 +32,9 @@ CARDS_SCHEMA = StructType([
     StructField("card_type", StringType(), True),
     StructField("card_number", StringType(), True),
     StructField("expires", StringType(), True),
+    StructField("cvv", IntegerType(), True),
     StructField("has_chip", StringType(), True),
+    StructField("num_cards_issued", IntegerType(), True),
     StructField("credit_limit", StringType(), True),
     StructField("acct_open_date", StringType(), True)
 ])
