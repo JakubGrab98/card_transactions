@@ -1,6 +1,9 @@
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 import src.utils as ut
+import src.const as ct
+from pyspark.sql import SparkSession
+import json
 
 
 def transform_transactions_data(df: DataFrame) -> DataFrame:
@@ -15,7 +18,6 @@ def transform_transactions_data(df: DataFrame) -> DataFrame:
         .withColumnRenamed("id", "natural_key")
         .withColumn("year", year("date"))
         .withColumn("month", month("date"))
-        .select(["natural_key", "date", "year", "month", "client_id", "card_id", "amount"])
     )
     (transaction_df.write
          .partitionBy("year", "month")
@@ -69,4 +71,20 @@ def transform_users_data(df: DataFrame) ->DataFrame:
         )
     )
     transformed_df.write.mode("overwrite").parquet("s3a://financials/data/transform/users_data")
+    return transformed_df
+
+def transform_mmc_codes(spark: SparkSession, json_path: str) -> DataFrame:
+    """
+    Transforms dataset with merchant industry data and save as parquet file.
+    :param spark: Spark Session.
+    :param json_path: Path to raw json file with merchant codes.
+    :return:
+    """
+    with open(json_path, "r") as f:
+        mcc_codes = json.load(f)
+
+    data_list = [(k, v) for k, v in mcc_codes.items()]
+    df = spark.createDataFrame(data_list, ["id", "name"])
+    transformed_df = df.withColumn("id", col("id").cast(IntegerType()))
+    transformed_df.write.mode("overwrite").parquet("s3a://financials/data/transform/mcc_codes")
     return transformed_df

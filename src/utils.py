@@ -5,7 +5,14 @@ from pyspark.sql.functions import *
 def format_amount_column(df: DataFrame, column_name: str) -> DataFrame:
     transform_df = (
         df
-        .withColumn("currency", substring(column_name, 1, 1))
+        .withColumn(
+            "currency",
+            regexp_replace(
+                substring(column_name, 1, 1),
+                "$",
+                "USD"
+            )
+        )
         .withColumn(
             column_name, substring(column_name, 2, len(column_name))
             .cast(DoubleType())
