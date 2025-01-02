@@ -1,7 +1,6 @@
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 import src.utils as ut
-import src.const as ct
 from pyspark.sql import SparkSession
 import json
 
