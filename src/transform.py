@@ -1,7 +1,19 @@
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 import src.utils as ut
+import src.const as ct
 
+
+def transform_merchant_data(df: DataFrame) -> None:
+    """
+    Select merchant distinct data and save as parquet files.
+    :param df: Raw transaction dataframe.
+    """
+    transformed_df = df.select(ct.MERCHANT_COLUMNS).distinct()
+    (transformed_df.write
+         .mode("overwrite")
+         .parquet("s3a://financials/data/transform/merchants_data")
+     )
 
 def transform_transactions_data(df: DataFrame) -> DataFrame:
     """
@@ -9,17 +21,22 @@ def transform_transactions_data(df: DataFrame) -> DataFrame:
     :param df: Raw transaction dataframe.
     :return: Transformed transaction dataset.
     """
-    transaction_df = (
+    base_df = (
         df
         .transform(ut.format_amount_column, column_name="amount")
         .withColumnRenamed("id", "natural_key")
         .withColumn("year", year("date"))
         .withColumn("month", month("date"))
+        .fillna("N/A")
     )
+
+    transform_merchant_data(base_df)
+
+    transaction_df = base_df.select(ct.TRANSACTION_COLUMNS)
     (transaction_df.write
-         .partitionBy("year", "month")
-         .mode("overwrite")
-         .parquet("s3a://financials/data/transform/transactions")
+     .partitionBy("year", "month")
+     .mode("overwrite")
+     .parquet("s3a://financials/data/transform/transactions")
      )
     return transaction_df
 

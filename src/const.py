@@ -42,3 +42,24 @@ CARDS_SCHEMA = StructType([
     StructField("credit_limit", StringType(), True),
     StructField("acct_open_date", StringType(), True)
 ])
+
+TRANSACTION_COLUMNS = [
+    "natural_key",
+    "date",
+    "client_id",
+    "card_id",
+    "amount",
+    "use_chip",
+    "merchant_id",
+    "merchant_city",
+    "merchant_state",
+    "currency",
+    "year",
+    "month"
+]
+
+MERCHANT_COLUMNS = [
+    "merchant_id",
+    "merchant_city",
+    "merchant_state",
+]
