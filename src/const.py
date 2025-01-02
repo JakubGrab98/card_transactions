@@ -6,7 +6,11 @@ TRANSACTION_SCHEMA = StructType([
     StructField("date", DateType(), True),
     StructField("client_id", IntegerType(), True),
     StructField("card_id", IntegerType(), True),
-    StructField("amount", StringType(), True)
+    StructField("amount", StringType(), True),
+    StructField("use_chip", StringType(), True),
+    StructField("merchant_id", IntegerType(), True),
+    StructField("merchant_city", StringType(), True),
+    StructField("merchant_state", StringType(), True),
 ])
 
 USERS_SCHEMA = StructType([
