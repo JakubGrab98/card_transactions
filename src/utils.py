@@ -9,7 +9,7 @@ def format_amount_column(df: DataFrame, column_name: str) -> DataFrame:
             "currency",
             regexp_replace(
                 substring(column_name, 1, 1),
-                "$",
+                r"\$",
                 "USD"
             )
         )
