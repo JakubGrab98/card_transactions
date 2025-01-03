@@ -48,6 +48,8 @@ def transform_merchant_data(transaction_df: DataFrame, mcc_df: DataFrame) -> Non
             [col("mcc") == col("id")],
             "left_outer"
         )
+        .withColumnRenamed("name", "merchant_industry")
+        .select(*merchant_df.columns, "merchant_industry")
     )
     (transformed_df.write
      .mode("overwrite")
