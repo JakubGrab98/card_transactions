@@ -46,7 +46,7 @@ CARDS_SCHEMA = StructType([
 ])
 
 TRANSACTION_COLUMNS = [
-    "natural_key",
+    "id",
     "date",
     "client_id",
     "card_id",
@@ -65,4 +65,33 @@ MERCHANT_COLUMNS = [
     "mcc",
     "merchant_city",
     "merchant_state",
+]
+
+CARD_COLUMNS = [
+    "id",
+    "client_id",
+    "card_brand",
+    "card_type",
+    "card_number",
+    "expires_date",
+    "has_chip",
+    "credit_limit",
+    "currency",
+    "acct_open_date",
+]
+
+USER_COLUMNS = [
+    "id",
+    "current_age",
+    "retirement_age",
+    "birth_year",
+    "birth_month",
+    "gender",
+    "latitude",
+    "longitude",
+    "per_capita_income",
+    "yearly_income",
+    "total_debt",
+    "credit_score",
+    "currency",
 ]
