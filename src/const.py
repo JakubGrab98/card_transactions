@@ -11,6 +11,8 @@ TRANSACTION_SCHEMA = StructType([
     StructField("merchant_id", IntegerType(), True),
     StructField("merchant_city", StringType(), True),
     StructField("merchant_state", StringType(), True),
+    StructField("zip", IntegerType(), True),
+    StructField("mcc", IntegerType(), True),
 ])
 
 USERS_SCHEMA = StructType([
@@ -60,6 +62,7 @@ TRANSACTION_COLUMNS = [
 
 MERCHANT_COLUMNS = [
     "merchant_id",
+    "mcc",
     "merchant_city",
     "merchant_state",
 ]

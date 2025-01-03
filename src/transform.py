@@ -4,24 +4,13 @@ import src.utils as ut
 import src.const as ct
 
 
-def transform_merchant_data(df: DataFrame) -> None:
-    """
-    Select merchant distinct data and save as parquet files.
-    :param df: Raw transaction dataframe.
-    """
-    transformed_df = df.select(ct.MERCHANT_COLUMNS).distinct()
-    (transformed_df.write
-         .mode("overwrite")
-         .parquet("s3a://financials/data/transform/merchants_data")
-     )
-
 def transform_transactions_data(df: DataFrame) -> DataFrame:
     """
-    Transforms dataset with transactions data and save data as parquet files.
+    Transforms dataset with transactions.
     :param df: Raw transaction dataframe.
     :return: Transformed transaction dataset.
     """
-    base_df = (
+    transaction_df = (
         df
         .transform(ut.format_amount_column, column_name="amount")
         .withColumnRenamed("id", "natural_key")
@@ -30,15 +19,40 @@ def transform_transactions_data(df: DataFrame) -> DataFrame:
         .fillna("N/A")
     )
 
-    transform_merchant_data(base_df)
+    return transaction_df
 
-    transaction_df = base_df.select(ct.TRANSACTION_COLUMNS)
+def save_transaction_data(transaction_df: DataFrame) -> None:
+    """
+    Saves transaction DataFrame to parquet files.
+    :param transaction_df: Transformed transaction DataFrame
+    """
+    transaction_df = transaction_df.select(ct.TRANSACTION_COLUMNS)
     (transaction_df.write
      .partitionBy("year", "month")
      .mode("overwrite")
      .parquet("s3a://financials/data/transform/transactions")
      )
-    return transaction_df
+
+def transform_merchant_data(transaction_df: DataFrame, mcc_df: DataFrame) -> None:
+    """
+    Select merchant distinct data and save as parquet files.
+    :param transaction_df: Transformed transaction dataframe.
+    :param mcc_df: Transformed mcc codes dataframe.
+
+    """
+    merchant_df = transaction_df.select(ct.MERCHANT_COLUMNS).distinct()
+    transformed_df = (
+        merchant_df
+        .join(
+            mcc_df,
+            [col("mcc") == col("id")],
+            "left_outer"
+        )
+    )
+    (transformed_df.write
+     .mode("overwrite")
+     .parquet("s3a://financials/data/transform/merchants_data")
+     )
 
 def transform_card_data(df: DataFrame) -> DataFrame:
     """
@@ -89,14 +103,13 @@ def transform_users_data(df: DataFrame) ->DataFrame:
 
 def transform_mmc_codes(df: DataFrame) -> DataFrame:
     """
-    Transforms dataset with merchant industry data and save as parquet file.
+    Transforms dataset with merchant industry data.
     :param df: Raw mmc_codes dataframe.
-    :return:
+    :return: DataFrame with mcc codes.
     """
     transformed_df = (
         df
         .withColumn("id", col("id").cast(IntegerType()))
         .withColumn("name", trim("name"))
     )
-    transformed_df.write.mode("overwrite").parquet("s3a://financials/data/transform/mcc_codes")
     return transformed_df
