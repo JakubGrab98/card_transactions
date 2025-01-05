@@ -53,8 +53,6 @@ TRANSACTION_COLUMNS = [
     "amount",
     "use_chip",
     "merchant_id",
-    "merchant_city",
-    "merchant_state",
     "currency",
     "year",
     "month"
