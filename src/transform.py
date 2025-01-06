@@ -81,4 +81,3 @@ def transform_mmc_codes(df: DataFrame) -> DataFrame:
         .withColumn("name", trim("name"))
     )
     return transformed_df
-s
