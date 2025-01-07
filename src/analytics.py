@@ -28,15 +28,14 @@ tr_users = (
     .parquet("s3a://financials/data/transform/users_data")
 )
 
-tr_merchant = (
-    spark.read
-    .parquet("s3a://financials/data/transform/merchants_data")
-)
+# tr_transaction.show()
+# tr_cards.show()
+# tr_users.show()
+# tr_merchant.show()
+# print(tr_merchant.count())
+# print(tr_transaction.count())
+# print(tr_merchant.select("merchant_id").distinct().count())
 
-tr_transaction.show()
-tr_cards.show()
-tr_users.show()
-tr_merchant.show()
 
 def filter_transaction_period(df: DataFrame, start_year: int, no_of_years: int):
     end_year = start_year + no_of_years
@@ -45,7 +44,7 @@ def filter_transaction_period(df: DataFrame, start_year: int, no_of_years: int):
     )
     return filtered_df
 
-filtered_df = filter_transaction_period(tr_transaction, 2010, 2015)
+filtered_df = filter_transaction_period(tr_transaction, 2010, 5)
 
 def presentation_client_summary(transaction_df: DataFrame, client_df: DataFrame) -> None:
     """
@@ -57,7 +56,7 @@ def presentation_client_summary(transaction_df: DataFrame, client_df: DataFrame)
     client_summary = (
         transaction_df
         .join(
-            client_df,
+            broadcast(client_df),
             [transaction_df["client_id"] == client_df["id"]],
             "left_outer"
         )
@@ -79,28 +78,42 @@ def presentation_client_summary(transaction_df: DataFrame, client_df: DataFrame)
             min("date").alias("first_transaction"),
             max("date").alias("last_transaction"),
         )
-        .show()
     )
-    # client_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/client_summary")
+    client_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/client_summary")
 
-def presentation_merchant_summary(transaction_df: DataFrame, merchant_df: DataFrame) -> None:
+def presentation_merchant_summary(transaction_df: DataFrame) -> None:
+
     merchant_summary = (
         transaction_df
-        .join(
-            merchant_df,
-            [transaction_df["merchant_id"] == merchant_df["merchant_id"]],
-            "left_outer",
-        )
         .groupby(["year", "month", "merchant_city", "merchant_industry"])
         .agg(
-            count(transaction_df.id).alias("transaction_count"),
+            count("id").alias("transaction_count"),
             sum("amount").alias("total_spent"),
             avg("amount").alias("avg_transaction"),
             countDistinct("client_id").alias("unique_customers")
         )
-        .show()
     )
-    # merchant_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/merchant_summary")
+    merchant_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/merchant_summary")
+
+def presentation_card_summary(transaction_df: DataFrame, card_df: DataFrame) -> None:
+    card_summary = (
+        transaction_df
+        .join(
+            broadcast(card_df),
+            [transaction_df["card_id"] == card_df["id"]],
+            "left_outer",
+        )
+        .groupby(["year", "month", "card_type", "card_brand"])
+        .agg(
+            count("id").alias("transaction_count"),
+            sum("amount").alias("total_spent"),
+            avg("amount").alias("avg_transaction"),
+            max("amount").alias("max_amount"),
+            min("amount").alias("min_amount")
+        )
+    )
+    card_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/card_summary")
 
 presentation_client_summary(filtered_df, tr_users)
-presentation_merchant_summary(filtered_df, tr_merchant)
+presentation_merchant_summary(filtered_df)
+presentation_card_summary(filtered_df, tr_cards)
