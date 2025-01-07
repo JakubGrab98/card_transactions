@@ -11,14 +11,18 @@ def transform_transactions_data(transaction_df: DataFrame, mcc_df: DataFrame) ->
     :param mcc_df: DataFrame with mcc codes details.
     :return: Transformed transaction dataset.
     """
+    transformed_mcc = (
+        mcc_df
+        .withColumnRenamed("name", "merchant_industry")
+        .withColumnRenamed("id", "mcc_id")
+    )
     joined_df = (
         transaction_df
         .join(
-            broadcast(mcc_df),
-            [col("mcc") == col("id")],
+            broadcast(transformed_mcc),
+            [col("mcc") == col("mcc_id")],
             "left_outer"
         )
-        .withColumnRenamed("name", "merchant_industry")
     )
     transformed_df = (
         joined_df
