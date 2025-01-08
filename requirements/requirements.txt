@@ -8,3 +8,5 @@ python-dotenv
 minio
 apache-airflow
 apache-airflow-providers-apache-spark
+streamlit
+s3fs

@@ -1,50 +1,20 @@
-import os
-from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
-from pyspark.sql.types import *
 
 
-spark = (SparkSession.builder
-         .appName("analytics")
-         .config("spark.hadoop.fs.s3a.endpoint", "http://192.168.2.101:9000")
-         .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ROOT_USER"))
-         .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_ROOT_PASSWORD"))
-         .getOrCreate()
-)
-
-
-tr_transaction = (
-    spark.read
-    .parquet("s3a://financials/data/transform/transactions")
-)
-
-tr_cards = (
-    spark.read
-    .parquet("s3a://financials/data/transform/card_data")
-)
-
-tr_users = (
-    spark.read
-    .parquet("s3a://financials/data/transform/users_data")
-)
-
-# tr_transaction.show()
-# tr_cards.show()
-# tr_users.show()
-# tr_merchant.show()
-# print(tr_merchant.count())
-# print(tr_transaction.count())
-# print(tr_merchant.select("merchant_id").distinct().count())
-
-
-def filter_transaction_period(df: DataFrame, start_year: int, no_of_years: int):
+def filter_transaction_period(df: DataFrame, start_year: int, no_of_years: int)-> DataFrame:
+    """
+    Filters transaction by periods.
+    :param df: Transformed transaction dataframe.
+    :param start_year: Start year of the analysis.
+    :param no_of_years: Number of years for analysis.
+    :return: Filtered DataFrame
+    """
     end_year = start_year + no_of_years
     filtered_df = df.filter(
         (col("year") >= start_year) & (col("year") <= end_year)
     )
     return filtered_df
 
-filtered_df = filter_transaction_period(tr_transaction, 2010, 5)
 
 def presentation_client_summary(transaction_df: DataFrame, client_df: DataFrame) -> None:
     """
@@ -82,7 +52,11 @@ def presentation_client_summary(transaction_df: DataFrame, client_df: DataFrame)
     client_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/client_summary")
 
 def presentation_merchant_summary(transaction_df: DataFrame) -> None:
-
+    """
+    Summarizes transaction data by merchant city and industry.
+    Saves data in presentation layer.
+    :param transaction_df: DataFrame with transaction data.
+    """
     merchant_summary = (
         transaction_df
         .groupby(["year", "month", "merchant_city", "merchant_industry"])
@@ -96,6 +70,12 @@ def presentation_merchant_summary(transaction_df: DataFrame) -> None:
     merchant_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/merchant_summary")
 
 def presentation_card_summary(transaction_df: DataFrame, card_df: DataFrame) -> None:
+    """
+    Summarizes transaction data by card type and brand.
+    Saves data in presentation layer.
+    :param transaction_df: DataFrame with transaction data.
+    :param card_df: DataFrame with card data.
+    """
     card_summary = (
         transaction_df
         .join(
@@ -105,7 +85,7 @@ def presentation_card_summary(transaction_df: DataFrame, card_df: DataFrame) -> 
         )
         .groupby(["year", "month", "card_type", "card_brand"])
         .agg(
-            count("id").alias("transaction_count"),
+            count(transaction_df["id"]).alias("transaction_count"),
             sum("amount").alias("total_spent"),
             avg("amount").alias("avg_transaction"),
             max("amount").alias("max_amount"),
@@ -113,7 +93,3 @@ def presentation_card_summary(transaction_df: DataFrame, card_df: DataFrame) -> 
         )
     )
     card_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/card_summary")
-
-presentation_client_summary(filtered_df, tr_users)
-presentation_merchant_summary(filtered_df)
-presentation_card_summary(filtered_df, tr_cards)
