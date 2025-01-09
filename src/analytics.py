@@ -42,12 +42,17 @@ def presentation_client_summary(transaction_df: DataFrame, client_df: DataFrame)
         )
         .groupby(["year", "month", "gender", "customer_age"])
         .agg(
-            count(transaction_df.id).alias("transaction_count"),
-            sum("amount").alias("total_spent"),
-            avg("amount").alias("avg_transaction"),
-            min("date").alias("first_transaction"),
-            max("date").alias("last_transaction"),
+            count(transaction_df.id).alias("Transaction Count"),
+            sum("amount").alias("Total Spent"),
+            avg("amount").alias("AVG Transaction"),
+            min("date").alias("First Transaction"),
+            max("date").alias("Last Transaction"),
         )
+        .withColumnRenamed("year", "Year")
+        .withColumnRenamed("month", "Month")
+        .withColumnRenamed("gender", "Gender")
+        .withColumnRenamed("customer_age", "Client Age")
+
     )
     client_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/client_summary")
 
@@ -61,11 +66,16 @@ def presentation_merchant_summary(transaction_df: DataFrame) -> None:
         transaction_df
         .groupby(["year", "month", "merchant_city", "merchant_industry"])
         .agg(
-            count("id").alias("transaction_count"),
-            sum("amount").alias("total_spent"),
-            avg("amount").alias("avg_transaction"),
-            countDistinct("client_id").alias("unique_customers")
+            count("id").alias("Transaction Count"),
+            sum("amount").alias("Total Spent"),
+            avg("amount").alias("AVG Transaction"),
+            countDistinct("client_id").alias("Client Count")
         )
+        .withColumnRenamed("year", "Year")
+        .withColumnRenamed("month", "Month")
+        .withColumnRenamed("merchant_city", "Merchant City")
+        .withColumnRenamed("merchant_industry", "Merchant Industry")
+
     )
     merchant_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/merchant_summary")
 
@@ -86,10 +96,14 @@ def presentation_card_summary(transaction_df: DataFrame, card_df: DataFrame) -> 
         .groupby(["year", "month", "card_type", "card_brand"])
         .agg(
             count(transaction_df["id"]).alias("transaction_count"),
-            sum("amount").alias("total_spent"),
-            avg("amount").alias("avg_transaction"),
-            max("amount").alias("max_amount"),
-            min("amount").alias("min_amount")
+            sum("amount").alias("Total Spent"),
+            avg("amount").alias("AVG Transaction"),
+            max("amount").alias("Max Amount"),
+            min("amount").alias("Min Amount")
         )
+        .withColumnRenamed("year", "Year")
+        .withColumnRenamed("month", "Month")
+        .withColumnRenamed("card_brand", "Card Brand")
+        .withColumnRenamed("card_type", "Card Type")
     )
     card_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/card_summary")
