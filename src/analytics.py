@@ -1,5 +1,11 @@
+import os
+from pyspark.sql.window import Window
 from pyspark.sql.functions import *
+from dotenv import load_dotenv
 
+
+load_dotenv()
+PRESENTATION_PATH = os.getenv("BUCKET_PRESENTATION_PATH")
 
 def filter_transaction_period(df: DataFrame, start_year: int, no_of_years: int)-> DataFrame:
     """
@@ -54,7 +60,12 @@ def presentation_client_summary(transaction_df: DataFrame, client_df: DataFrame)
         .withColumnRenamed("customer_age", "Client Age")
 
     )
-    client_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/client_summary")
+    (
+        client_summary.write
+        .partitionBy("Year")
+        .mode("overwrite")
+        .parquet(f"{PRESENTATION_PATH}/client_summary")
+    )
 
 def presentation_merchant_summary(transaction_df: DataFrame) -> None:
     """
@@ -77,7 +88,12 @@ def presentation_merchant_summary(transaction_df: DataFrame) -> None:
         .withColumnRenamed("merchant_industry", "Merchant Industry")
 
     )
-    merchant_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/merchant_summary")
+    (
+        merchant_summary.write
+        .partitionBy(["Year", "Merchant Industry"])
+        .mode("overwrite")
+        .parquet(f"{PRESENTATION_PATH}/merchant_summary")
+    )
 
 def presentation_card_summary(transaction_df: DataFrame, card_df: DataFrame) -> None:
     """
@@ -106,4 +122,59 @@ def presentation_card_summary(transaction_df: DataFrame, card_df: DataFrame) -> 
         .withColumnRenamed("card_brand", "Card Brand")
         .withColumnRenamed("card_type", "Card Type")
     )
-    card_summary.write.mode("overwrite").parquet("s3a://financials/data/presentation/card_summary")
+    (
+        card_summary.write
+        .partitionBy("Year")
+        .mode("overwrite")
+        .parquet(f"{PRESENTATION_PATH}/card_summary")
+    )
+
+def year_over_year_growth(transaction_df: DataFrame) -> DataFrame:
+    """
+    Calculates year-over-year growth in spending.
+    :param transaction_df: DataFrame with transaction data.
+    :return: DataFrame with YoY growth metrics.
+    """
+    spending_by_year = (
+        transaction_df
+        .groupby("year")
+        .agg(sum("amount").alias("total_spent"))
+        .withColumnRenamed("year", "Year")
+    )
+
+    spending_yoy = (
+        spending_by_year
+        .withColumn("prev_year_spent", lag("total_spent").over(Window.orderBy("Year")))
+        .withColumn("YoY Growth",
+                    when(col("prev_year_spent").isNotNull(),
+                         ((col("total_spent") - col("prev_year_spent")) / col("prev_year_spent")) * 100)
+                    .otherwise(None))
+    )
+    (
+        spending_yoy.write
+        .mode("overwrite")
+        .parquet(f"{PRESENTATION_PATH}/yoy_growth")
+    )
+    return spending_yoy
+
+def customer_frequency_recency(transaction_df: DataFrame) -> DataFrame:
+    """
+    Calculates frequency and recency metrics for customer transactions.
+    :param transaction_df: DataFrame with transaction data.
+    :return: DataFrame with frequency and recency metrics.
+    """
+    customer_metrics = (
+        transaction_df
+        .groupby("client_id")
+        .agg(
+            count("id").alias("Transaction Frequency"),
+            max("date").alias("Last Transaction Date"),
+        )
+        .withColumn("Recency", datediff(current_date(), col("Last Transaction Date")))
+    )
+    (
+        customer_metrics.write
+        .mode("overwrite")
+        .parquet(f"{PRESENTATION_PATH}/client_recency")
+    )
+    return customer_metrics
