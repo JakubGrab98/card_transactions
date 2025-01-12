@@ -16,16 +16,17 @@ if __name__ == "__main__":
     )
 
     st.title("Card Transaction Analytics")
-    st.sidebar.success("Select a page above")
 
     client_df = ut.read_parquet_pandas(minio_filesystem, "financials/data/presentation/client_summary")
     merchant_df = ut.read_parquet_pandas(minio_filesystem, "financials/data/presentation/merchant_summary")
     card_df = ut.read_parquet_pandas(minio_filesystem, "financials/data/presentation/card_summary")
-
-
-    st.dataframe(client_df)
-    # st.bar_chart(client_df, x="Client Age", y="AVG Transaction")
-    # st.bar_chart(client_df, x="Year", y="AVG Transaction", color="Gender")
-    st.dataframe(merchant_df)
-    st.dataframe(card_df)
-
+    yoy_growth = ut.read_parquet_pandas(minio_filesystem, "financials/data/presentation/yoy_growth")
+    client_recency = ut.read_parquet_pandas(minio_filesystem, "financials/data/presentation/client_recency")
+    st.write("Year to Year Growth Analysis")
+    st.dataframe(yoy_growth.style.format({"YoY Growth": "{:.2%}"}))
+    st.write(
+        f"Total spent grouped by client age"
+    )
+    st.bar_chart(client_df, x="Client Age", y="Total Spent")
+    st.write("Total spent by year grouped by gender")
+    st.bar_chart(client_df, x="Year", y="Total Spent", color="Gender")
