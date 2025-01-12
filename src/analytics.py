@@ -62,7 +62,6 @@ def presentation_client_summary(transaction_df: DataFrame, client_df: DataFrame)
     )
     (
         client_summary.write
-        .partitionBy("Year")
         .mode("overwrite")
         .parquet(f"{PRESENTATION_PATH}/client_summary")
     )
@@ -90,7 +89,6 @@ def presentation_merchant_summary(transaction_df: DataFrame) -> None:
     )
     (
         merchant_summary.write
-        .partitionBy(["Year", "Merchant Industry"])
         .mode("overwrite")
         .parquet(f"{PRESENTATION_PATH}/merchant_summary")
     )
@@ -124,7 +122,6 @@ def presentation_card_summary(transaction_df: DataFrame, card_df: DataFrame) -> 
     )
     (
         card_summary.write
-        .partitionBy("Year")
         .mode("overwrite")
         .parquet(f"{PRESENTATION_PATH}/card_summary")
     )
@@ -147,8 +144,9 @@ def year_over_year_growth(transaction_df: DataFrame) -> DataFrame:
         .withColumn("prev_year_spent", lag("total_spent").over(Window.orderBy("Year")))
         .withColumn("YoY Growth",
                     when(col("prev_year_spent").isNotNull(),
-                         ((col("total_spent") - col("prev_year_spent")) / col("prev_year_spent")) * 100)
+                         ((col("total_spent") - col("prev_year_spent")) / col("prev_year_spent")))
                     .otherwise(None))
+        .withColumnRenamed("total_spent", "Total Spent")
     )
     (
         spending_yoy.write
