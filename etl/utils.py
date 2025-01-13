@@ -1,6 +1,25 @@
+import json
+from pyspark.sql import SparkSession
 from pyspark.sql.types import *
 from pyspark.sql.functions import *
 
+
+def read_csv_data(spark: SparkSession, path: str, schema: StructType):
+    df = (spark.read
+        .option("header", "true")
+        .schema(schema)
+        .csv(path)
+    )
+    return df
+
+def read_json_data(spark: SparkSession, path: str):
+    df = spark.read.text(path)
+    json_str = ''.join([row.value.strip() for row in df.collect()])
+    json_data = json.loads(json_str)
+    data_list = [(k, v) for k, v in json_data.items()]
+
+    final_df = spark.createDataFrame(data_list, ["id", "name"])
+    return final_df
 
 def format_amount_column(df: DataFrame, column_name: str) -> DataFrame:
     transform_df = (

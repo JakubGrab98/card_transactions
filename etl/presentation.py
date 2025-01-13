@@ -1,4 +1,5 @@
 import os
+from pyspark.sql import SparkSession
 from pyspark.sql.window import Window
 from pyspark.sql.functions import *
 from dotenv import load_dotenv
@@ -176,3 +177,24 @@ def customer_frequency_recency(transaction_df: DataFrame) -> DataFrame:
         .parquet(f"{PRESENTATION_PATH}/client_recency")
     )
     return customer_metrics
+
+def presentation(spark: SparkSession):
+    transaction_df = spark.read.parquet("s3a://financials/data/transform/transactions")
+    client_df = spark.read.parquet("s3a://financials/data/transform/users_data")
+    card_df = spark.read.parquet("s3a://financials/data/transform/card_data")
+    presentation_client_summary(transaction_df, client_df)
+    presentation_merchant_summary(transaction_df)
+    presentation_card_summary(transaction_df, card_df)
+    year_over_year_growth(transaction_df)
+    customer_frequency_recency(transaction_df)
+
+if __name__ == "__main__":
+    spark_session = (
+        SparkSession.builder
+        .appName("Finance Transactions")
+        .config("spark.hadoop.fs.s3a.endpoint", "http://192.168.2.101:9000")
+        .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ROOT_USER"))
+        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_ROOT_PASSWORD"))
+        .getOrCreate()
+    )
+    presentation(spark_session)
