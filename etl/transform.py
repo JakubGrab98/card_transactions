@@ -1,7 +1,9 @@
+import os
+from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
-import src.utils as ut
-import src.const as ct
+import etl.utils as ut
+import etl.const as ct
 
 
 def transform_transactions_data(transaction_df: DataFrame, mcc_df: DataFrame) -> DataFrame:
@@ -85,3 +87,35 @@ def transform_mmc_codes(df: DataFrame) -> DataFrame:
         .withColumn("name", trim("name"))
     )
     return transformed_df
+
+def transformation(spark: SparkSession):
+    raw_transaction = ut.read_csv_data(
+        spark, "s3a://financials/data/raw/transactions_data.csv", ct.TRANSACTION_SCHEMA
+    )
+    raw_users = ut.read_csv_data(
+        spark, "s3a://financials/data/raw/users_data.csv", ct.USERS_SCHEMA
+    )
+    raw_cards = ut.read_csv_data(
+        spark, "s3a://financials/data/raw/cards_data.csv", ct.CARDS_SCHEMA
+    )
+
+    raw_mcc_codes = ut.read_json_data(
+        spark, "s3a://financials/data/raw/mcc_codes.json",
+    )
+
+    mmc_df = transform_mmc_codes(raw_mcc_codes)
+    transform_transactions_data(raw_transaction, mmc_df)
+    transform_users_data(raw_users)
+    transform_card_data(raw_cards)
+
+
+if __name__ == "__main__":
+    spark_session = (
+        SparkSession.builder
+        .appName("Finance Transactions")
+        .config("spark.hadoop.fs.s3a.endpoint", "http://192.168.2.101:9000")
+        .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ROOT_USER"))
+        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_ROOT_PASSWORD"))
+        .getOrCreate()
+    )
+    transformation(spark_session)
