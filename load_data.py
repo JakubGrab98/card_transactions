@@ -36,5 +36,8 @@ def read_data(spark: SparkSession, source_path: str="data/transform"):
 
 if __name__ == "__main__":
     minio_upload_data("financials", "data/raw/users_data.csv")
+    minio_upload_data("financials", "data/raw/transactions_data.csv")
+    minio_upload_data("financials", "data/raw/cards_data.csv")
+    minio_upload_data("financials", "data/raw/mcc_codes.json")
     minio_upload_data("financials", "spark-events/test.txt")
 

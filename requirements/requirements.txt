@@ -6,7 +6,8 @@ pyspark
 requests
 python-dotenv
 minio
-apache-airflow
+apache-airflow[postgres]
 apache-airflow-providers-apache-spark
 streamlit
 s3fs
+pendulum
