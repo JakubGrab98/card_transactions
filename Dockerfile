@@ -1,11 +1,25 @@
-FROM ubuntu:latest
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
-    openjdk-11-jdk curl wget tar iputils-ping python3 python3-venv python3-pip
+    openjdk-11-jdk \
+    curl \
+    wget \
+    tar \
+    iputils-ping \
+    software-properties-common && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y python3.10 python3.10-venv python3.10-dev && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN python3.10 -m ensurepip --upgrade && \
+    python3.10 -m pip install --upgrade pip
 
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV PATH=$JAVA_HOME/bin:$PATH
-ENV SPARK_VERSION=3.5.3
+ENV SPARK_VERSION=3.5.4
 ENV HADOOP_VERSION=3
 
 RUN wget https://dlcdn.apache.org/spark/spark-$SPARK_VERSION/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz \
@@ -17,6 +31,8 @@ ENV SPARK_HOME=/opt/spark
 ENV PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
 ENV PYSPARK_PYTHON python3
 ENV PYTHONPATH=$SPARK_HOME/python/:$PYTHONPATH
+ENV PYTHONUNBUFFERED=1
+ENV AIRFLOW_HOME=/opt/airflow
 
 COPY conf/spark-defaults.conf "$SPARK_HOME/conf"
 
@@ -39,11 +55,8 @@ ENV MINIO_DATA_DIR=/data
 COPY spark-minio-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/spark-minio-entrypoint.sh
 
-RUN ln -s /usr/bin/python3 /usr/bin/python
-
 COPY requirements/requirements.txt .
-RUN python -m venv venv
-RUN /bin/bash -c "source /venv/bin/activate"
+RUN python3.10 -m venv venv
 RUN /bin/bash -c "source /venv/bin/activate && pip install -r requirements.txt"
 
-CMD ["spark-minio-entrypoint.sh", "python3"]
+CMD ["spark-minio-entrypoint.sh", "python3", "airflow", "webserver"]

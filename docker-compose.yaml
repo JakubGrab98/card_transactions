@@ -1,62 +1,96 @@
 version: '3.9'
 
-services:
-  master:
+
+x-spark-common: &spark-common
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    command: [ "bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh" ]
+
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - airflow.env
+  environment:
+    - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+    - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+  volumes:
+    - ./etl:/opt/airflow/jobs
+    - ./dags:/opt/airflow/dags
+  depends_on:
+    - postgres
+  networks:
+    - net-transactions
+
+services:
+  master:
+    <<: *spark-common
     container_name: master
     environment:
       - SPARK_MODE=master
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - SPARK_MASTER_WEBUI_PORT=8081
     volumes:
       - ./:/opt/spark/apps
-    command: ["bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh"]
     networks:
       net-transactions:
         ipv4_address: 192.168.2.100
     ports:
-      - "8080:8080"  # Spark Master UI
-      - "7077:7077"  # Spark Master RPC
+      - "8081:8081"
+      - "7077:7077"
 
   worker1:
-    build:
-      context: .
-      dockerfile: Dockerfile
     container_name: worker1
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://192.168.2.100:7077
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     volumes:
       - ./:/opt/spark/apps
-    command: ["bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh"]
     networks:
       net-transactions:
         ipv4_address: 192.168.2.101
     ports:
-      - "9000:9000"  # MinIO API
-      - "9001:9001"  # MinIO Console
+      - "9000:9000"
+      - "9001:9001"
 
   spark-history-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
     container_name: spark-history-server
     environment:
       - SPARK_MODE=history
       - SPARK_MASTER_URL=spark://192.168.2.100:7077
       - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=s3a://financials/spark-events -Dspark.history.ui.port=18080 -Dspark.hadoop.fs.s3a.access.key=${MINIO_ROOT_USER} -Dspark.hadoop.fs.s3a.secret.key=${MINIO_ROOT_PASSWORD} -Dspark.hadoop.fs.s3a.endpoint=http://192.168.2.101:9000 -Dspark.hadoop.fs.s3a.path.style.access=true -Dspark.hadoop.fs.s3a.connection.ssl.enabled=false
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     command: [ "bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh" ]
     networks:
       net-transactions:
         ipv4_address: 192.168.2.102
     ports:
       - '18080:18080'
+
+  postgres:
+      image: postgres:14.0
+      environment:
+        - POSTGRES_USER=airflow
+        - POSTGRES_PASSWORD=airflow
+        - POSTGRES_DB=airflow
+      networks:
+        net-transactions:
+          ipv4_address: 192.168.2.103
+
+  webserver:
+      <<: *airflow-common
+      command: ["bash", "-c", "source /venv/bin/activate && airflow db init && airflow webserver"]
+      ports:
+        - "8080:8080"
+      depends_on:
+        - scheduler
+
+  scheduler:
+      <<: *airflow-common
+      command: ["bash", "-c", "source /venv/bin/activate && airflow db migrate && airflow users create --username admin --firstname Jakub --lastname Grabarczyk --role Admin --email kubagrabarczyk98@gmail.com --password admin && airflow scheduler"]
 
 networks:
   net-transactions:

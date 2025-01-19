@@ -2,10 +2,8 @@ import os
 from pyspark.sql import SparkSession
 from pyspark.sql.window import Window
 from pyspark.sql.functions import *
-from dotenv import load_dotenv
 
 
-load_dotenv()
 PRESENTATION_PATH = os.getenv("BUCKET_PRESENTATION_PATH")
 
 def filter_transaction_period(df: DataFrame, start_year: int, no_of_years: int)-> DataFrame:
