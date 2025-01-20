@@ -4,6 +4,7 @@ from pyspark.sql.window import Window
 from pyspark.sql.functions import *
 
 
+TRANSFORM_PATH = os.getenv("BUCKET_TRANSFORM_PATH")
 PRESENTATION_PATH = os.getenv("BUCKET_PRESENTATION_PATH")
 
 def filter_transaction_period(df: DataFrame, start_year: int, no_of_years: int)-> DataFrame:
@@ -177,9 +178,9 @@ def customer_frequency_recency(transaction_df: DataFrame) -> DataFrame:
     return customer_metrics
 
 def presentation(spark: SparkSession):
-    transaction_df = spark.read.parquet("s3a://financials/data/transform/transactions")
-    client_df = spark.read.parquet("s3a://financials/data/transform/users_data")
-    card_df = spark.read.parquet("s3a://financials/data/transform/card_data")
+    transaction_df = spark.read.parquet(f"{TRANSFORM_PATH}/transactions")
+    client_df = spark.read.parquet(f"{TRANSFORM_PATH}/users_data")
+    card_df = spark.read.parquet(f"{TRANSFORM_PATH}/card_data")
     presentation_client_summary(transaction_df, client_df)
     presentation_merchant_summary(transaction_df)
     presentation_card_summary(transaction_df, card_df)
@@ -190,9 +191,6 @@ if __name__ == "__main__":
     spark_session = (
         SparkSession.builder
         .appName("Finance Transactions")
-        .config("spark.hadoop.fs.s3a.endpoint", "http://192.168.2.101:9000")
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ROOT_USER"))
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_ROOT_PASSWORD"))
         .getOrCreate()
     )
     presentation(spark_session)
