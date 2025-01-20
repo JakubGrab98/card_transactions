@@ -6,6 +6,9 @@ import utils as ut
 import const as ct
 
 
+RAW_PATH = os.getenv("BUCKET_RAW_PATH")
+TRANSFORM_PATH = os.getenv("BUCKET_TRANSFORM_PATH")
+
 def transform_transactions_data(transaction_df: DataFrame, mcc_df: DataFrame) -> DataFrame:
     """
     Transforms dataset with transactions.
@@ -37,7 +40,7 @@ def transform_transactions_data(transaction_df: DataFrame, mcc_df: DataFrame) ->
     (transformed_df.write
      .partitionBy("year", "month")
      .mode("overwrite")
-     .parquet("s3a://financials/data/transform/transactions")
+     .parquet(f"{TRANSFORM_PATH}/transactions")
      )
 
     return transformed_df
@@ -55,7 +58,7 @@ def transform_card_data(df: DataFrame) -> DataFrame:
         .transform(ut.format_amount_column, column_name="credit_limit")
         .select(ct.CARD_COLUMNS)
     )
-    transformed_df.write.mode("overwrite").parquet("s3a://financials/data/transform/card_data")
+    transformed_df.write.mode("overwrite").parquet(f"{TRANSFORM_PATH}/card_data")
     return transformed_df
 
 def transform_users_data(df: DataFrame) ->DataFrame:
@@ -72,7 +75,7 @@ def transform_users_data(df: DataFrame) ->DataFrame:
         .withColumn("current_age", col("current_age").cast(IntegerType()))
         .select(ct.USER_COLUMNS)
     )
-    transformed_df.write.mode("overwrite").parquet("s3a://financials/data/transform/users_data")
+    transformed_df.write.mode("overwrite").parquet(f"{TRANSFORM_PATH}/users_data")
     return transformed_df
 
 def transform_mmc_codes(df: DataFrame) -> DataFrame:
@@ -90,17 +93,17 @@ def transform_mmc_codes(df: DataFrame) -> DataFrame:
 
 def transformation(spark: SparkSession):
     raw_transaction = ut.read_csv_data(
-        spark, "s3a://financials/data/raw/transactions_data.csv", ct.TRANSACTION_SCHEMA
+        spark, f"{RAW_PATH}/transactions_data.csv", ct.TRANSACTION_SCHEMA
     )
     raw_users = ut.read_csv_data(
-        spark, "s3a://financials/data/raw/users_data.csv", ct.USERS_SCHEMA
+        spark, f"{RAW_PATH}/users_data.csv", ct.USERS_SCHEMA
     )
     raw_cards = ut.read_csv_data(
-        spark, "s3a://financials/data/raw/cards_data.csv", ct.CARDS_SCHEMA
+        spark, f"{RAW_PATH}/cards_data.csv", ct.CARDS_SCHEMA
     )
 
     raw_mcc_codes = ut.read_json_data(
-        spark, "s3a://financials/data/raw/mcc_codes.json",
+        spark, f"{RAW_PATH}/mcc_codes.json",
     )
 
     mmc_df = transform_mmc_codes(raw_mcc_codes)
@@ -113,9 +116,6 @@ if __name__ == "__main__":
     spark_session = (
         SparkSession.builder
         .appName("Finance Transactions")
-        .config("spark.hadoop.fs.s3a.endpoint", "http://192.168.2.101:9000")
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ROOT_USER"))
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_ROOT_PASSWORD"))
         .getOrCreate()
     )
     transformation(spark_session)
